@@ -1,0 +1,18 @@
+
+Welcome to fdisk (util-linux 2.27.1).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+
+Command (m for help): Partition type
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended (container for logical partitions)
+Select (default p): Partition number (1-4, default 1): First sector (1-1439, default 1): Last sector, +sectors or +size{K,M,G,T,P} (3-1439, default 1439): 
+Created a new partition 1 of type 'Linux' and of size 3.5 KiB.
+
+Command (m for help): Selected partition 1
+The bootable flag on partition 1 is enabled now.
+
+Command (m for help): The partition table has been altered.
+Syncing disks.
+
