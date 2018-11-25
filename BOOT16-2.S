@@ -10,6 +10,7 @@ _start:
 failureMsg:        .asciz "Sector read failed"
 enterNumber:       .asciz "Enter a partition(1-4)"
 no_ext_msg:        .asciz "E:NoExt"
+no_32b_msg:        .asciz "E:No32"
 bootDrive:         .byte 0
 
 DAP:
@@ -19,6 +20,28 @@ DAPSec: .word 1
 DAPLoc: .long 0x7E00
 DAPLbaLo: .int 1
 DAPLbaHi: .int 0
+
+.align 8
+gdtr:
+    .word 0
+    .long 0
+
+gdt_base:
+    .quad 0
+    .word 0xFFFF
+    .word 0
+    .byte 0
+    .byte 0x9A
+    .byte 0xCF
+    .byte 0
+    .word 0xFFFF
+    .word 0
+    .word 0
+    .byte 0
+    .byte 0x92
+    .byte 0xCF
+    .byte 0
+gdt_end:
 
 printc:
     mov $0x0E, %ah # use bios teletype
@@ -78,7 +101,6 @@ read_sectors:
 
         mov $0x42, %ah
         mov (bootDrive), %dl
-        #xor %ds, %ds
         movw $DAP, %si
 
         int $0x13
@@ -178,15 +200,99 @@ continue:
     movw $0x7F00, (DAPLoc) # load sector containing vbr to addr 0x7F00
     call read_sectors
 
-    # jump to loaded vbr
-    ljmp $0x00, $0x7F00
+    /*mov $0x2403, %ax
+    int $0x15
+    jb no_32b
+    cmp $0, %ah
+    jnz no_32b
 
-    # in case the jump returns for some odd reason,
-    # we will catch it with the ol' cli hlt.
+    mov $0x2402, %ax
+    int $0x15
+    jb no_32b
+    cmp $0, %ah
+    jnz no_32b
+
+    cmp $1, %al
+    jz a20_activated
+
+    mov $0x2401, %ax
+    int $0x15
+    jb no_32b
+    cmp $0, %ah
+    jnz no_32b*/
+
+    #a20_activated:
+
+    cli
+
+    in $0x92, %al
+    or $2, %al
+    out %al, $0x92
+
+    xor %eax, %eax
+    mov %ds, %ax
+    shl $4, %eax
+    add $gdt_base, %eax
+    mov %eax, gdtr+2
+    mov $gdt_end, %eax
+    sub $gdt_base, %eax
+
+    mov %ax, gdtr
+    lgdtw gdtr
+
+    cli
+    mov %cr0, %eax
+    or $1, %eax
+    mov %eax, %cr0
+
+   # mov $0x10, %ax
+    #mov %ax, %ds
+    #mov %ax, %es
+    #mov %ax, %fs
+    #mov %ax, %gs
+    #mov %ax, %ss
+
+
+    # jump to loaded vbr
+
+    #ljmp $0x08, $0x7F00
+
+    #ljmp $0x08, $0x7F00
+
+    #mov $failureMsg, %si
+    #call print
+    #mov $10, %eax
+    ljmp $0x08, $0x7F00
 
     cli
     hlt
-    # fill rest of the sector with zeroes
-    . = _start + 510
-    # add mbr signature(0x55 0xAA) at end of sector
-    .word 0xAA55
+
+    # in case the jump returns for some odd reason,
+    # we will catch it with the ol' cli hlt.
+    jmp fail_loop
+
+    no_32b:
+        mov $no_32b_msg, %si
+        call print
+    fail_loop:
+    cli
+    hlt
+
+.code32
+final:
+    /*mov $0x10, %eax
+    mov %eax, %ds
+    mov %eax, %es
+    mov %eax, %fs
+    mov %eax, %gs
+    mov %eax, %ss
+    mov $0xFFFF, %esp*/
+
+    #ljmp $0x08, $0x7F00
+    cli
+    hlt
+
+# fill rest of the sector with zeroes
+. = _start + 510
+# add mbr signature(0x55 0xAA) at end of sector
+.word 0xAA55

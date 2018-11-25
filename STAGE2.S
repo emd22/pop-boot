@@ -1,36 +1,28 @@
-.code16
+.code32
 .globl _start
 
 jmp _start
 
-outMsg: .asciz "HELLO, WORLD!"
-
-print:
-    lodsb        # load one char from si into al
-    orb %al, %al # check if al == 0
-    jz .Lend     # if so, return to previous label
-    movb $0x0E, %ah
-    int $0x10    # call bios interrupt to print character
-    jmp print    # jmp until end of string
-    .Lend:
-        ret
-
 _start:
+
     cli
-    # set stack to code location(stage2 loaded at 0000:7E00)
-    mov $0x07F0, %ax
-    # setup registers
-    mov %ax, %ds
-    mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %gs
+    xor %eax, %eax
+    #mov %eax, %ss
+    mov $0x7F00, %esp
 
-    mov $0x0000, %ax
-    mov %ax, %ss
-    mov $0xF000, %sp
+    xor %eax, %eax
+    mov %eax, %ds
+    mov %eax, %es
+    mov %eax, %fs
+    mov %eax, %gs
     sti
-    mov $outMsg, %si
-    call print
-
+    //jmp write_e
+    movb $'E', (0xB8000)
+    movb $0x57, (0xB8001)
+    #int $0x19
     cli
     hlt
+
+.code32
+write_e:
+    
